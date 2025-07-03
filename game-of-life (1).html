@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game of Life - Игра Жизнь Конвея</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: #1a1a1a;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            border: 1px solid #3a3a3a;
+        }
+
+        button:hover {
+            background: #3a3a3a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+        }
+
+        .game-board {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            overflow: auto;
+            min-height: 400px;
+            height: calc(100vh - 400px);
+            border-radius: 8px;
+            background: #0f0f0f;
+            padding: 10px;
+        }
+
+        #grid {
+            display: grid;
+            gap: 1px;
+            background: #2a2a2a;
+            padding: 1px;
+            border-radius: 4px;
+        }
+
+        .cell {
+            background: #0a0a0a;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .cell:hover {
+            background: #3a3a3a !important;
+        }
+
+        .cell.alive {
+            background: #667eea;
+            animation: pulse 0.5s ease;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .patterns {
+            margin-bottom: 20px;
+        }
+
+        .patterns h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: #999;
+        }
+
+        .pattern-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pattern-buttons button {
+            padding: 8px 16px;
+            font-size: 13px;
+            background: #1f1f1f;
+        }
+
+        .info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: #1f1f1f;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .stat {
+            color: #888;
+        }
+
+        .stat span {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            width: 120px;
+            height: 4px;
+            background: #2a2a2a;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            border-radius: 2px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #667eea;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #667eea;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+        }
+
+        .instructions {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            button {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+
+            .info {
+                justify-content: center;
+                text-align: center;
+            }
+
+            .stats {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Game of Life</h1>
+        <p class="subtitle">Клеточный автомат Джона Конвея</p>
+
+        <div class="info">
+            <div class="stats">
+                <div class="stat">Поколение: <span id="generation">0</span></div>
+                <div class="stat">Живых клеток: <span id="population">0</span></div>
+            </div>
+            <div class="speed-control">
+                <label for="speed">Скорость:</label>
+                <input type="range" id="speed" min="50" max="1000" value="200" step="50">
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="playPause">▶️ Старт</button>
+            <button id="step">⏭️ Шаг</button>
+            <button id="clear">🗑️ Очистить</button>
+            <button id="random">🎲 Случайно</button>
+        </div>
+
+        <div class="patterns">
+            <h3>Готовые паттерны:</h3>
+            <div class="pattern-buttons">
+                <button onclick="loadPattern('glider')">✈️ Глайдер</button>
+                <button onclick="loadPattern('blinker')">💫 Мигалка</button>
+                <button onclick="loadPattern('toad')">🐸 Жаба</button>
+                <button onclick="loadPattern('beacon')">🚨 Маяк</button>
+                <button onclick="loadPattern('pulsar')">⭐ Пульсар</button>
+                <button onclick="loadPattern('gosper')">🔫 Пушка Госпера</button>
+            </div>
+        </div>
+
+        <div class="game-board">
+            <div id="grid"></div>
+        </div>
+
+        <p class="instructions">
+            💡 Кликайте по клеткам чтобы оживить их • Удерживайте и двигайте мышь для рисования
+        </p>
+    </div>
+
+    <script>
+        let GRID_SIZE = 50;
+        let CELL_SIZE = 12;
+        
+        let grid = [];
+        let running = false;
+        let generation = 0;
+        let intervalId = null;
+        let isMouseDown = false;
+        let speed = 200;
+
+        const gridElement = document.getElementById('grid');
+        const playPauseBtn = document.getElementById('playPause');
+        const generationElement = document.getElementById('generation');
+        const populationElement = document.getElementById('population');
+        const speedSlider = document.getElementById('speed');
+
+        // Расчет оптимального размера сетки
+        function calculateOptimalGridSize() {
+            const container = document.querySelector('.game-board');
+            const containerWidth = container.offsetWidth - 20; // учитываем padding
+            const containerHeight = window.innerHeight - container.offsetTop - 100; // учитываем отступы
+            
+            // Рассчитываем размер клетки для заполнения пространства
+            const maxCellWidth = Math.floor(containerWidth / 30); // минимум 30 клеток по ширине
+            const maxCellHeight = Math.floor(containerHeight / 30); // минимум 30 клеток по высоте
+            CELL_SIZE = Math.min(maxCellWidth, maxCellHeight, 20); // максимум 20px на клетку
+            CELL_SIZE = Math.max(CELL_SIZE, 8); // минимум 8px на клетку
+            
+            // Рассчитываем количество клеток
+            GRID_SIZE = Math.floor(Math.min(containerWidth / CELL_SIZE, containerHeight / CELL_SIZE));
+            GRID_SIZE = Math.max(30, Math.min(GRID_SIZE, 100)); // от 30 до 100 клеток
+        }
+
+        // Инициализация сетки
+        function initGrid() {
+            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
+            gridElement.style.gridTemplateColumns = `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`;
+            gridElement.innerHTML = '';
+            
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.style.width = `${CELL_SIZE}px`;
+                    cell.style.height = `${CELL_SIZE}px`;
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    
+                    cell.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        isMouseDown = true;
+                        toggleCell(x, y);
+                    });
+                    
+                    cell.addEventListener('mouseenter', () => {
+                        if (isMouseDown) {
+                            setCell(x, y, true);
+                        }
+                    });
+                    
+                    gridElement.appendChild(cell);
+                }
+            }
+        }
+
+        // Обработчики мыши
+        document.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+
+        document.addEventListener('mouseleave', () => {
+            isMouseDown = false;
+        });
+
+        // Переключение состояния клетки
+        function toggleCell(x, y) {
+            grid[y][x] = !grid[y][x];
+            updateCell(x, y);
+            updatePopulation();
+        }
+
+        // Установка состояния клетки
+        function setCell(x, y, alive) {
+            grid[y][x] = alive;
+            updateCell(x, y);
+            updatePopulation();
+        }
+
+        // Обновление отображения клетки
+        function updateCell(x, y) {
+            const cell = gridElement.children[y * GRID_SIZE + x];
+            if (grid[y][x]) {
+                cell.classList.add('alive');
+            } else {
+                cell.classList.remove('alive');
+            }
+        }
+
+        // Подсчет живых соседей
+        function countNeighbors(x, y) {
+            let count = 0;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    
+                    const nx = (x + dx + GRID_SIZE) % GRID_SIZE;
+                    const ny = (y + dy + GRID_SIZE) % GRID_SIZE;
+                    
+                    if (grid[ny][nx]) count++;
+                }
+            }
+            return count;
+        }
+
+        // Следующее поколение
+        function nextGeneration() {
+            const newGrid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
+            
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const neighbors = countNeighbors(x, y);
+                    const alive = grid[y][x];
+                    
+                    if (alive && (neighbors === 2 || neighbors === 3)) {
+                        newGrid[y][x] = true;
+                    } else if (!alive && neighbors === 3) {
+                        newGrid[y][x] = true;
+                    }
+                }
+            }
+            
+            grid = newGrid;
+            generation++;
+            updateDisplay();
+        }
+
+        // Обновление отображения
+        function updateDisplay() {
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    updateCell(x, y);
+                }
+            }
+            generationElement.textContent = generation;
+            updatePopulation();
+        }
+
+        // Подсчет популяции
+        function updatePopulation() {
+            let count = 0;
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (grid[y][x]) count++;
+                }
+            }
+            populationElement.textContent = count;
+        }
+
+        // Управление игрой
+        function play() {
+            running = true;
+            playPauseBtn.textContent = '⏸️ Пауза';
+            playPauseBtn.classList.add('active');
+            intervalId = setInterval(nextGeneration, speed);
+        }
+
+        function pause() {
+            running = false;
+            playPauseBtn.textContent = '▶️ Старт';
+            playPauseBtn.classList.remove('active');
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        }
+
+        // Загрузка паттернов
+        function loadPattern(type) {
+            clear();
+            const centerX = Math.floor(GRID_SIZE / 2);
+            const centerY = Math.floor(GRID_SIZE / 2);
+            
+            const patterns = {
+                glider: [
+                    [0, 1], [1, 2], [2, 0], [2, 1], [2, 2]
+                ],
+                blinker: [
+                    [0, 0], [0, 1], [0, 2]
+                ],
+                toad: [
+                    [0, 1], [0, 2], [0, 3],
+                    [1, 0], [1, 1], [1, 2]
+                ],
+                beacon: [
+                    [0, 0], [0, 1], [1, 0], [1, 1],
+                    [2, 2], [2, 3], [3, 2], [3, 3]
+                ],
+                pulsar: [
+                    // Верхняя часть
+                    [-6, -4], [-6, -3], [-6, -2],
+                    [-4, -6], [-3, -6], [-2, -6],
+                    [-4, -1], [-3, -1], [-2, -1],
+                    [-1, -4], [-1, -3], [-1, -2],
+                    // Правая часть
+                    [2, -4], [3, -4], [4, -4],
+                    [6, -2], [6, -3], [6, -4],
+                    [1, -2], [1, -3], [1, -4],
+                    [2, -1], [3, -1], [4, -1],
+                    // Нижняя часть
+                    [6, 2], [6, 3], [6, 4],
+                    [4, 6], [3, 6], [2, 6],
+                    [4, 1], [3, 1], [2, 1],
+                    [1, 4], [1, 3], [1, 2],
+                    // Левая часть
+                    [-2, 4], [-3, 4], [-4, 4],
+                    [-6, 2], [-6, 3], [-6, 4],
+                    [-1, 2], [-1, 3], [-1, 4],
+                    [-2, 1], [-3, 1], [-4, 1]
+                ],
+                gosper: [
+                    // Левый квадрат
+                    [-17, 0], [-17, 1], [-16, 0], [-16, 1],
+                    // Левая часть пушки
+                    [-7, 0], [-7, 1], [-7, 2], [-6, -1], [-6, 3],
+                    [-5, -2], [-5, 4], [-4, -2], [-4, 4], [-3, 1],
+                    [-2, -1], [-2, 3], [-1, 0], [-1, 1], [-1, 2], [0, 1],
+                    // Правая часть пушки
+                    [3, -2], [3, -1], [3, 0], [4, -2], [4, -1], [4, 0],
+                    [5, -3], [5, 1], [7, -4], [7, -3], [7, 1], [7, 2],
+                    // Правый квадрат
+                    [17, -2], [17, -1], [18, -2], [18, -1]
+                ]
+            };
+            
+            if (patterns[type]) {
+                patterns[type].forEach(([dx, dy]) => {
+                    const x = centerX + dx;
+                    const y = centerY + dy;
+                    if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+                        grid[y][x] = true;
+                    }
+                });
+                updateDisplay();
+            }
+        }
+
+        // Очистка поля
+        function clear() {
+            pause();
+            generation = 0;
+            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
+            updateDisplay();
+        }
+
+        // Случайное заполнение
+        function randomize() {
+            clear();
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    grid[y][x] = Math.random() < 0.25;
+                }
+            }
+            updateDisplay();
+        }
+
+        // Обработчики событий
+        playPauseBtn.addEventListener('click', () => {
+            if (running) {
+                pause();
+            } else {
+                play();
+            }
+        });
+
+        document.getElementById('step').addEventListener('click', () => {
+            pause();
+            nextGeneration();
+        });
+
+        document.getElementById('clear').addEventListener('click', clear);
+        document.getElementById('random').addEventListener('click', randomize);
+
+        speedSlider.addEventListener('input', (e) => {
+            speed = 1050 - e.target.value;
+            if (running) {
+                pause();
+                play();
+            }
+        });
+
+        // Предотвращение выделения текста при рисовании
+        gridElement.addEventListener('selectstart', (e) => {
+            e.preventDefault();
+        });
+
+        // Инициализация
+        calculateOptimalGridSize();
+        initGrid();
+        loadPattern('glider');
+
+        // Обработчик изменения размера окна
+        window.addEventListener('resize', () => {
+            const wasRunning = running;
+            if (wasRunning) pause();
+            
+            calculateOptimalGridSize();
+            initGrid();
+            updateDisplay();
+            
+            if (wasRunning) play();
+        });
+    </script>
+</body>
+</html>
